@@ -9,24 +9,14 @@ from fla.modules.fused_kl_div.module import (
     FusedKLDivLoss,
 )
 from fla.modules.fused_kl_div.ops import (
-    MAX_FUSED_SIZE,
-    STATIC_WARPS,
-    FusedKLDivLossFunction,
-    elementwise_mul_kernel,
     fused_kl_div_bwd,
     fused_kl_div_fwd,
     fused_kl_div_loss,
-    kl_div_kernel,
 )
 
 __all__ = [
-    'MAX_FUSED_SIZE',
-    'STATIC_WARPS',
     'FusedKLDivLoss',
-    'FusedKLDivLossFunction',
-    'elementwise_mul_kernel',
     'fused_kl_div_bwd',
     'fused_kl_div_fwd',
     'fused_kl_div_loss',
-    'kl_div_kernel',
 ]

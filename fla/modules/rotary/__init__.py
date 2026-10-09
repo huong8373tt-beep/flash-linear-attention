@@ -7,22 +7,16 @@
 
 from fla.modules.rotary.module import RotaryEmbedding
 from fla.modules.rotary.ops import (
-    NUM_WARPS_AUTOTUNE,
-    RotaryEmbeddingFunction,
     rotary_embedding,
     rotary_embedding_fwdbwd,
-    rotary_embedding_kernel,
     rotary_embedding_ref,
     rotate_half,
 )
 
 __all__ = [
-    'NUM_WARPS_AUTOTUNE',
     'RotaryEmbedding',
-    'RotaryEmbeddingFunction',
     'rotary_embedding',
     'rotary_embedding_fwdbwd',
-    'rotary_embedding_kernel',
     'rotary_embedding_ref',
     'rotate_half',
 ]

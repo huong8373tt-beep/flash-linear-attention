@@ -9,24 +9,16 @@ from fla.modules.fused_cross_entropy.module import (
     FusedCrossEntropyLoss,
 )
 from fla.modules.fused_cross_entropy.ops import (
-    CrossEntropyLossFunction,
-    FusedCrossEntropyFunction,
     cross_entropy_bwd,
-    cross_entropy_bwd_kernel,
     cross_entropy_fwd,
-    cross_entropy_fwd_kernel,
     cross_entropy_loss,
     fused_cross_entropy_forward,
 )
 
 __all__ = [
-    'CrossEntropyLossFunction',
-    'FusedCrossEntropyFunction',
     'FusedCrossEntropyLoss',
     'cross_entropy_bwd',
-    'cross_entropy_bwd_kernel',
     'cross_entropy_fwd',
-    'cross_entropy_fwd_kernel',
     'cross_entropy_loss',
     'fused_cross_entropy_forward',
 ]

@@ -10,31 +10,21 @@ from fla.modules.fused_linear_cross_entropy.module import (
     LinearLossParallel,
 )
 from fla.modules.fused_linear_cross_entropy.ops import (
-    MAX_FUSED_SIZE,
-    STATIC_WARPS,
-    FusedLinearCrossEntropyFunction,
-    elementwise_mul_kernel,
     fused_linear_cross_entropy_backward,
     fused_linear_cross_entropy_bwd,
     fused_linear_cross_entropy_forward,
     fused_linear_cross_entropy_fwd,
     fused_linear_cross_entropy_loss,
     logsumexp_fwd,
-    logsumexp_fwd_kernel,
 )
 
 __all__ = [
-    'MAX_FUSED_SIZE',
-    'STATIC_WARPS',
-    'FusedLinearCrossEntropyFunction',
     'FusedLinearCrossEntropyLoss',
     'LinearLossParallel',
-    'elementwise_mul_kernel',
     'fused_linear_cross_entropy_backward',
     'fused_linear_cross_entropy_bwd',
     'fused_linear_cross_entropy_forward',
     'fused_linear_cross_entropy_fwd',
     'fused_linear_cross_entropy_loss',
     'logsumexp_fwd',
-    'logsumexp_fwd_kernel',
 ]

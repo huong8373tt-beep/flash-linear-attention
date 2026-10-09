@@ -10,7 +10,6 @@ import torch
 import torch.nn.functional as F
 
 from fla.modules.activations import (
-    _is_inner_contiguous,
     elu_p1,
     logsigmoid,
     powglu,
@@ -24,6 +23,7 @@ from fla.modules.activations import (
     swish,
 )
 from fla.modules.activations import fast_gelu_impl as gelu
+from fla.modules.activations.ops import _is_inner_contiguous
 from fla.utils import assert_close, device
 
 

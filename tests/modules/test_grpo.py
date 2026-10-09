@@ -18,6 +18,7 @@ def test_grpo_compile_policy_is_local_to_its_function(run_python, is_npu):
         """
         import os
         import sys
+        import pytest
         import torch
         from fla import utils
 
@@ -28,6 +29,10 @@ def test_grpo_compile_policy_is_local_to_its_function(run_python, is_npu):
 
         assert torch.compile is original_compile
         assert hasattr(grpo.grpo_loss_with_old_logps, '_torchdynamo_orig_callable') == (not utils.IS_NPU)
+        with pytest.warns(DeprecationWarning, match='fla.modules.backends is deprecated'):
+            from fla.modules.backends import dispatch
+        assert callable(dispatch)
+        assert torch.compile is original_compile
         """,
         TEST_IS_NPU=is_npu,
     )

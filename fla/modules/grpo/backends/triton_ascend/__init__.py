@@ -35,14 +35,14 @@ class TritonAscendBackend(BaseBackend):
     ):
         from fla.modules.grpo.backends.triton_ascend.ops import fused_grpo_loss_npu
         return fused_grpo_loss_npu(
-            logits,
-            ref_logp,
-            input_ids,
-            advantages,
-            beta,
-            completion_mask,
-            save_kl,
-            inplace,
+            logits=logits,
+            ref_logp=ref_logp,
+            input_ids=input_ids,
+            advantages=advantages,
+            beta=beta,
+            completion_mask=completion_mask,
+            save_kl=save_kl,
+            inplace=inplace,
         )
 
 

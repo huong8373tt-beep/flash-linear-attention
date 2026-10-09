@@ -36,17 +36,15 @@ class TritonAscendBackend(BaseBackend):
         inplace_backward=False,
         process_group=None,
     ):
-        from fla.modules.fused_cross_entropy.backends.triton_ascend.ops import (
-            cross_entropy_loss_npu,
-        )
+        from fla.modules.fused_cross_entropy.backends.triton_ascend.ops import cross_entropy_loss_npu
         return cross_entropy_loss_npu(
-            logits,
-            target,
-            label_smoothing,
-            logit_scale,
-            lse_square_scale,
-            logit_softcapping,
-            ignore_index,
-            inplace_backward,
-            process_group,
+            logits=logits,
+            target=target,
+            label_smoothing=label_smoothing,
+            logit_scale=logit_scale,
+            lse_square_scale=lse_square_scale,
+            logit_softcapping=logit_softcapping,
+            ignore_index=ignore_index,
+            inplace_backward=inplace_backward,
+            process_group=process_group,
         )

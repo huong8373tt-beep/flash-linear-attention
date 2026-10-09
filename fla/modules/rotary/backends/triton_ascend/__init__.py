@@ -36,9 +36,9 @@ class TritonAscendBackend(BaseBackend):
     ):
         from fla.modules.rotary.backends.triton_ascend.ops import rotary_embedding_fwdbwd_npu
         return rotary_embedding_fwdbwd_npu(
-            x,
-            cos,
-            sin,
+            x=x,
+            cos=cos,
+            sin=sin,
             seqlen_offsets=seqlen_offsets,
             cu_seqlens=cu_seqlens,
             interleaved=interleaved,

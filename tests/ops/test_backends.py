@@ -24,6 +24,13 @@ from fla.ops.rwkv6.backends import tilelang as rwkv6_tilelang_backend
 from fla.utils import env
 
 _REAL_PATH_EXISTS = Path.exists
+_TILELANG_BACKENDS = [
+    pytest.param(attn_tilelang_backend, attn_tilelang_backend.AttnTileLangBackend, id='attn'),
+    pytest.param(common_tilelang_backend, common_tilelang_backend.CommonTileLangBackend, id='common'),
+    pytest.param(kda_tilelang_backend, kda_tilelang_backend.KDATileLangBackend, id='kda'),
+    pytest.param(rwkv6_tilelang_backend, rwkv6_tilelang_backend.RWKV6TileLangBackend, id='rwkv6'),
+    pytest.param(dplr_tilelang_backend, dplr_tilelang_backend.DPLRTileLangBackend, id='dplr'),
+]
 
 
 @pytest.fixture(autouse=True)
@@ -55,20 +62,6 @@ def _configure_no_nvcc(monkeypatch):
         return _REAL_PATH_EXISTS(self)
 
     monkeypatch.setattr(env.Path, "exists", fake_exists)
-
-
-def _backend_cls(backend_module):
-    if backend_module is attn_tilelang_backend:
-        return backend_module.AttnTileLangBackend
-    if backend_module is common_tilelang_backend:
-        return backend_module.CommonTileLangBackend
-    if backend_module is rwkv6_tilelang_backend:
-        return backend_module.RWKV6TileLangBackend
-    if backend_module is kda_tilelang_backend:
-        return backend_module.KDATileLangBackend
-    if backend_module is dplr_tilelang_backend:
-        return backend_module.DPLRTileLangBackend
-    raise ValueError(f"unrecognized TileLang backend module: {backend_module}")
 
 
 @pytest.mark.parametrize("default_enable", [False, True], ids=["default-off", "default-on"])
@@ -169,6 +162,64 @@ def test_registry_ownership_and_priority(enable_dispatch):
     assert wrapped() == 3
 
 
+def test_dispatch_rechecks_backend_eligibility(monkeypatch, enable_dispatch):
+    class Primary(BaseBackend):
+        backend_type = 'test_primary'
+        env_var = 'FLA_TEST_PRIMARY'
+        priority = 0
+
+        def compute(self, x):
+            return x * 2
+
+        def compute_verifier(self, x):
+            return x >= 0, None
+
+    class Secondary(BaseBackend):
+        backend_type = 'test_secondary'
+        env_var = 'FLA_TEST_SECONDARY'
+
+        def compute(self, x):
+            return x * 4
+
+    monkeypatch.setenv('FLA_TEST_PRIMARY', '1')
+    monkeypatch.setenv('FLA_TEST_SECONDARY', '1')
+    registry = BackendRegistry('test')
+    registry.register(Secondary())
+    registry.register(Primary())
+
+    @registry.dispatch
+    def compute(x):
+        return x * 3
+
+    assert compute(1) == 2
+    assert compute(-1) == -4
+    monkeypatch.setenv('FLA_TEST_PRIMARY', '0')
+    assert compute(1) == 4
+    monkeypatch.setenv('FLA_TEST_SECONDARY', '0')
+    assert compute(1) == 3
+    monkeypatch.setenv('FLA_TEST_PRIMARY', '1')
+    assert compute(1) == 2
+
+
+def test_dispatch_propagates_backend_errors(enable_dispatch):
+    error = RuntimeError('backend execution failed')
+
+    class Backend(BaseBackend):
+        def compute(self, x):
+            raise error
+
+    registry = BackendRegistry('test')
+    registry.register(Backend())
+
+    @registry.dispatch
+    def compute(x):
+        return x
+
+    with pytest.raises(RuntimeError) as caught:
+        compute(1)
+    assert caught.value is error
+
+
 def test_class_registration_preserves_identity_and_replaces_backend(monkeypatch):
     monkeypatch.setattr(registry_module, '_registries', {})
 
@@ -187,15 +238,11 @@ def test_class_registration_preserves_identity_and_replaces_backend(monkeypatch)
     assert len(registry._backends) == 1
 
 
-@pytest.mark.parametrize(('operation', 'error'), [
-    ('unknown_dispatch_test', ModuleNotFoundError),
-    ('modules.unknown_dispatch_test', ModuleNotFoundError),
-    ('modules', ValueError),
-])
-def test_dispatch_rejects_unknown_operation(monkeypatch, operation, error):
+@pytest.mark.parametrize('operation', ['unknown_dispatch_test', 'modules.unknown_dispatch_test'])
+def test_dispatch_rejects_unknown_operation(monkeypatch, operation):
     monkeypatch.setattr(registry_module, '_registries', {})
     registry_module._registry_for(operation)
-    with pytest.raises(error):
+    with pytest.raises(ModuleNotFoundError):
         dispatch(operation)
 
 
@@ -234,6 +281,8 @@ def test_resolver_preserves_backend_dependency_errors(monkeypatch, dependency, a
         ('rotary', 'rotary_embedding_fwdbwd', ('cos', 'sin'), {'interleaved': True, 'conjugate': True}),
         ('conv', 'causal_conv1d_fwd', ('weight', 'bias', 'residual'), {'chunk_size': 32, 'output_final_state': True}),
         ('conv', 'causal_conv1d_bwd', ('dy', 'dht'), {'chunk_size': 32, 'layout_fallback': True}),
+        ('conv', 'causal_conv1d_update', ('cache', 'weight', 'bias', 'residual'), {'activation': 'silu'}),
+        ('conv', 'causal_conv1d_update_states', ('initial_state',), {'state_len': 4}),
         ('grpo', 'fused_grpo_loss', ('ref_logp', 'input_ids', 'advantages'), {'beta': 0.2, 'save_kl': True}),
         ('fused_cross_entropy', 'cross_entropy_loss', ('target',), {'ignore_index': -1, 'label_smoothing': 0.1}),
         ('fused_linear_cross_entropy', 'fused_linear_cross_entropy_fwd', ('target', 'weight'), {'reduction': 'sum'}),
@@ -249,7 +298,7 @@ def test_resolver_preserves_backend_dependency_errors(monkeypatch, dependency, a
     ],
     ids=[
         'activations-forward', 'activations-backward', 'rotary-forward', 'rotary-backward',
-        'conv-forward', 'conv-backward', 'grpo', 'cross-entropy',
+        'conv-forward', 'conv-backward', 'conv-update', 'conv-update-states', 'grpo', 'cross-entropy',
         'linear-cross-entropy-forward', 'linear-cross-entropy-backward', 'kl-div-forward', 'kl-div-backward',
         'layernorm-forward', 'layernorm-backward', 'l2norm-forward', 'l2norm-backward',
         'norm-gate-forward', 'norm-gate-backward',
@@ -304,8 +353,9 @@ def test_gdn2_dispatch_uses_local_registry(monkeypatch, module_name, func_name):
     from fla.ops.gdn2.backends.triton_ascend import TritonAscendGDN2Backend
 
     entry = getattr(importlib.import_module(f'fla.ops.gdn2.{module_name}'), func_name)
-    if registry_module._DISPATCH_DISABLED or not hasattr(entry, '__wrapped__'):
+    if registry_module._DISPATCH_DISABLED:
         pytest.skip('Backend dispatch was disabled before import')
+    assert hasattr(entry, '__wrapped__')
     monkeypatch.setattr(TritonAscendGDN2Backend, 'is_available', classmethod(lambda cls: True))
     monkeypatch.setattr(TritonAscendGDN2Backend, 'is_enabled', classmethod(lambda cls: True))
     monkeypatch.setattr(TritonAscendGDN2Backend, f'{func_name}_verifier', lambda self, q: (True, None))
@@ -327,7 +377,7 @@ def test_public_imports_do_not_load_legacy_dispatch(run_python, disabled):
         import sys
         import warnings
 
-        warnings.filterwarnings('error', message='fla.ops.backends is deprecated', category=DeprecationWarning)
+        warnings.filterwarnings('error', message='fla[.](ops|modules)[.]backends is deprecated', category=DeprecationWarning)
         from fla.ops.kda import chunk_kda
         from fla.backends import dispatch
         from fla.modules import ShortConvolution
@@ -336,6 +386,7 @@ def test_public_imports_do_not_load_legacy_dispatch(run_python, disabled):
         assert callable(dispatch)
         assert callable(ShortConvolution)
         assert 'fla.ops.backends' not in sys.modules
+        assert 'fla.modules.backends' not in sys.modules
         """,
         FLA_DISABLE_BACKEND_DISPATCH=disabled,
     )
@@ -363,44 +414,6 @@ def test_conv_dispatch_uses_global_gluon_policy(monkeypatch, direction):
 
     monkeypatch.setattr(GluonBackend, func_name, implementation)
     assert getattr(ops, func_name)(x=torch.tensor([1.0, 2.0], requires_grad=True)) is result
-
-
-@pytest.mark.skipif(registry_module._DISPATCH_DISABLED, reason='Backend dispatch was disabled before import')
-@pytest.mark.parametrize('name', ['causal_conv1d_update', 'causal_conv1d_update_states'])
-def test_conv_legacy_kernel_helpers_bypass_dispatch(monkeypatch, name):
-    from fla.modules.conv import ops
-    from fla.modules.conv.backends.triton_ascend import TritonAscendBackend
-    from fla.modules.conv.triton import kernels
-
-    result = object()
-    monkeypatch.setattr(TritonAscendBackend, 'is_available', classmethod(lambda cls: True))
-    monkeypatch.setattr(TritonAscendBackend, 'is_enabled', classmethod(lambda cls: True))
-    monkeypatch.setattr(TritonAscendBackend, name, lambda self, **kwargs: result)
-    calls = []
-
-    class Kernel:
-        def __getitem__(self, grid):
-            def launch(**kwargs):
-                calls.append(kwargs)
-                kwargs[output].fill_(7)
-            return launch
-
-    if name == 'causal_conv1d_update':
-        kernel_name, output = 'causal_conv1d_update_kernel', 'y'
-        args = dict(x=torch.ones(2, 3), cache=torch.zeros(2, 3, 2), weight=torch.ones(3, 2))
-    else:
-        kernel_name, output = 'causal_conv1d_states_fwd_kernel', 'final_state'
-        args = dict(x=torch.ones(1, 2, 3), state_len=2)
-    monkeypatch.setattr(ops, kernel_name, Kernel())
-
-    assert getattr(ops, name)(**args) is result
-    assert calls == []
-    default = getattr(kernels, name)(**args)
-    if name == 'causal_conv1d_update':
-        assert default[1] is args['cache']
-        default = default[0]
-    assert len(calls) == 1
-    torch.testing.assert_close(default, torch.full_like(default, 7))
 
 
 @pytest.mark.parametrize('first_import', ['fla.backends', 'fla.ops.backends'])
@@ -450,11 +463,18 @@ def test_legacy_dispatch_uses_shared_registry(run_python, first_import):
         custom.register(Backend())
         assert legacy.dispatch('custom_import_test')(compute)(2) == 4
 
-        import pytest
-
-        for resolve in [dispatch, legacy.dispatch, legacy.BackendRegistry]:
-            with pytest.raises(ValueError, match='operation-specific key'):
-                resolve('modules')
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always', DeprecationWarning)
+            from fla.modules.backends import dispatch as module_dispatch, modules_registry
+        matching = [w for w in caught if str(w.message).startswith('fla.modules.backends is deprecated')]
+        assert len(matching) == 1
+        assert 'next release after 0.6.0' in str(matching[0].message)
+        assert legacy.BackendRegistry('modules') is modules_registry
+        assert dispatch('modules').__self__ is modules_registry
+        assert legacy.dispatch('modules').__self__ is modules_registry
+        assert module_dispatch is dispatch
+        modules_registry.register(Backend())
+        assert module_dispatch('modules')(compute)(2) == 4
         """,
         FIRST_IMPORT=first_import,
         FLA_DISABLE_BACKEND_DISPATCH='0',
@@ -571,30 +591,29 @@ def test_no_nvcc_logs_fallback_once(monkeypatch, caplog):
     assert "FLA_TILELANG=0" in fallback_messages[0]
 
 
-@pytest.mark.parametrize("backend_module", [
-    attn_tilelang_backend, common_tilelang_backend, kda_tilelang_backend, rwkv6_tilelang_backend, dplr_tilelang_backend,
-])
-def test_tilelang_backend_gated_by_nvcc_probe(monkeypatch, backend_module):
+@pytest.mark.parametrize(('backend_module', 'backend_class'), _TILELANG_BACKENDS)
+def test_tilelang_backend_gated_by_nvcc_probe(monkeypatch, backend_module, backend_class):
     monkeypatch.setattr(registry_module, "find_spec_cached", lambda name: object())
     monkeypatch.setattr(backend_module, "has_usable_nvcc", lambda: False)
-    assert _backend_cls(backend_module).is_available() is False
+    assert backend_class.is_available() is False
 
     monkeypatch.setattr(backend_module, "has_usable_nvcc", lambda: True)
-    assert _backend_cls(backend_module).is_available() is True
+    assert backend_class.is_available() is True
 
 
-@pytest.mark.parametrize("backend_module", [
-    attn_tilelang_backend, common_tilelang_backend, kda_tilelang_backend, rwkv6_tilelang_backend, dplr_tilelang_backend,
-])
-def test_tilelang_backend_unavailable_without_tilelang(monkeypatch, backend_module):
+@pytest.mark.parametrize(('backend_module', 'backend_class'), _TILELANG_BACKENDS)
+def test_tilelang_backend_unavailable_without_tilelang(monkeypatch, backend_module, backend_class):
     monkeypatch.setattr(registry_module, "find_spec_cached", lambda name: None)
     monkeypatch.setattr(backend_module, "has_usable_nvcc", lambda: True)
-    assert _backend_cls(backend_module).is_available() is False
+    assert backend_class.is_available() is False
 
 
-@pytest.mark.parametrize('backend_module', [attn_tilelang_backend, common_tilelang_backend], ids=['attn', 'common'])
+@pytest.mark.parametrize(('backend_module', 'backend_class'), [
+    pytest.param(attn_tilelang_backend, attn_tilelang_backend.AttnTileLangBackend, id='attn'),
+    pytest.param(common_tilelang_backend, common_tilelang_backend.CommonTileLangBackend, id='common'),
+])
 @pytest.mark.parametrize('setting', [None, '0', '1'], ids=['default', 'disabled', 'enabled'])
-def test_tilelang_backend_default_and_override(monkeypatch, backend_module, setting):
+def test_tilelang_backend_default_and_override(monkeypatch, backend_module, backend_class, setting):
     if setting is None:
         monkeypatch.delenv('FLA_TILELANG', raising=False)
     else:
@@ -602,7 +621,7 @@ def test_tilelang_backend_default_and_override(monkeypatch, backend_module, sett
     expected = backend_module.IS_NVIDIA_HOPPER and backend_module.TRITON_ABOVE_3_4_0
     if setting is not None:
         expected = setting != '0'
-    assert _backend_cls(backend_module).is_enabled() is expected
+    assert backend_class.is_enabled() is expected
 
 
 def test_rwkv6_tilelang_backend_requires_opt_in(monkeypatch):

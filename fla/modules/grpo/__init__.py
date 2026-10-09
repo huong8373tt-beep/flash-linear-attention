@@ -6,23 +6,13 @@
 #   https://github.com/fla-org/flash-linear-attention/graphs/contributors
 
 from fla.modules.grpo.ops import (
-    NUM_STAGES_AUTOTUNE,
-    NUM_WARPS_AUTOTUNE,
-    GrpoLoss,
     fused_grpo_loss,
-    grpo_bwd_kernel,
-    grpo_fwd_kernel,
     grpo_loss_torch,
     grpo_loss_with_old_logps,
 )
 
 __all__ = [
-    'NUM_STAGES_AUTOTUNE',
-    'NUM_WARPS_AUTOTUNE',
-    'GrpoLoss',
     'fused_grpo_loss',
-    'grpo_bwd_kernel',
-    'grpo_fwd_kernel',
     'grpo_loss_torch',
     'grpo_loss_with_old_logps',
 ]
