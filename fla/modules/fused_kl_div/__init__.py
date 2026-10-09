@@ -5,18 +5,7 @@
 # For a list of all contributors, visit:
 #   https://github.com/fla-org/flash-linear-attention/graphs/contributors
 
-from fla.modules.fused_kl_div.module import (
-    FusedKLDivLoss,
-)
-from fla.modules.fused_kl_div.ops import (
-    fused_kl_div_bwd,
-    fused_kl_div_fwd,
-    fused_kl_div_loss,
-)
+from fla.modules.fused_kl_div.module import FusedKLDivLoss
+from fla.modules.fused_kl_div.ops import fused_kl_div_loss
 
-__all__ = [
-    'FusedKLDivLoss',
-    'fused_kl_div_bwd',
-    'fused_kl_div_fwd',
-    'fused_kl_div_loss',
-]
+__all__ = ['FusedKLDivLoss', 'fused_kl_div_loss']

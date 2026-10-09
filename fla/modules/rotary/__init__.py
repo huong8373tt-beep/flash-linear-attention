@@ -6,17 +6,6 @@
 #   https://github.com/fla-org/flash-linear-attention/graphs/contributors
 
 from fla.modules.rotary.module import RotaryEmbedding
-from fla.modules.rotary.ops import (
-    rotary_embedding,
-    rotary_embedding_fwdbwd,
-    rotary_embedding_ref,
-    rotate_half,
-)
+from fla.modules.rotary.ops import rotary_embedding
 
-__all__ = [
-    'RotaryEmbedding',
-    'rotary_embedding',
-    'rotary_embedding_fwdbwd',
-    'rotary_embedding_ref',
-    'rotate_half',
-]
+__all__ = ['RotaryEmbedding', 'rotary_embedding']

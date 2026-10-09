@@ -81,6 +81,3 @@ class TritonAscendBackend(BaseBackend):
     ):
         from fla.modules.fused_linear_cross_entropy.triton_ascend.ops import fused_linear_cross_entropy_backward_npu
         return fused_linear_cross_entropy_backward_npu(do=do, dx=dx, dw=dw, db=db)
-
-    fused_linear_cross_entropy_forward = fused_linear_cross_entropy_fwd
-    fused_linear_cross_entropy_backward = fused_linear_cross_entropy_bwd

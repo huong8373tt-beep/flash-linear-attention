@@ -8,7 +8,8 @@
 import pytest
 import torch
 
-from fla.modules.grpo import fused_grpo_loss, grpo_loss_torch, grpo_loss_with_old_logps
+from fla.modules.grpo import fused_grpo_loss, grpo_loss_with_old_logps
+from fla.modules.grpo.ops import grpo_loss_torch
 from fla.utils import IS_NVIDIA_HOPPER, assert_close, device, device_torch_lib
 
 

@@ -14,7 +14,7 @@ import torch
 
 import fla
 from fla import layers, models, modules
-from fla.modules import activations, fused_linear_cross_entropy, l2norm
+from fla.modules import activations, l2norm
 
 
 def test_top_level_exports_layers_and_non_config_models():
@@ -81,8 +81,6 @@ def test_public_function_aliases():
     assert activations.ACT2FN['silu'] is activations.swish
     assert activations.ACT2FN['gelu'] is activations.fast_gelu_impl
     assert l2norm.l2_norm is l2norm.l2norm
-    assert fused_linear_cross_entropy.fused_linear_cross_entropy_forward is fused_linear_cross_entropy.fused_linear_cross_entropy_fwd
-    assert fused_linear_cross_entropy.fused_linear_cross_entropy_backward is fused_linear_cross_entropy.fused_linear_cross_entropy_bwd
 
 
 @pytest.mark.parametrize(

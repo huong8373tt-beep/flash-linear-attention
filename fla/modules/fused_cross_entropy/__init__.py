@@ -5,20 +5,7 @@
 # For a list of all contributors, visit:
 #   https://github.com/fla-org/flash-linear-attention/graphs/contributors
 
-from fla.modules.fused_cross_entropy.module import (
-    FusedCrossEntropyLoss,
-)
-from fla.modules.fused_cross_entropy.ops import (
-    cross_entropy_bwd,
-    cross_entropy_fwd,
-    cross_entropy_loss,
-    fused_cross_entropy_forward,
-)
+from fla.modules.fused_cross_entropy.module import FusedCrossEntropyLoss
+from fla.modules.fused_cross_entropy.ops import cross_entropy_loss
 
-__all__ = [
-    'FusedCrossEntropyLoss',
-    'cross_entropy_bwd',
-    'cross_entropy_fwd',
-    'cross_entropy_loss',
-    'fused_cross_entropy_forward',
-]
+__all__ = ['FusedCrossEntropyLoss', 'cross_entropy_loss']

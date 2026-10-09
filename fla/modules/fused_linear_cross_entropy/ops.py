@@ -18,7 +18,7 @@ import triton
 import triton.language as tl
 
 from fla.backends import dispatch
-from fla.modules.fused_cross_entropy import cross_entropy_bwd, cross_entropy_fwd
+from fla.modules.fused_cross_entropy.ops import cross_entropy_bwd, cross_entropy_fwd
 from fla.ops.utils.op import exp, log, tanh
 from fla.utils import IS_AMD, input_guard
 
