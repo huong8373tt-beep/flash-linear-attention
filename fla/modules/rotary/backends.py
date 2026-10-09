@@ -5,6 +5,6 @@
 # For a list of all contributors, visit:
 #   https://github.com/fla-org/flash-linear-attention/graphs/contributors
 
-from fla.modules.fused_cross_entropy.backends.triton_ascend import TritonAscendBackend
+from fla.modules.rotary.triton_ascend import TritonAscendBackend
 
 __all__ = ['TritonAscendBackend']

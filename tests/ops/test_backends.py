@@ -238,7 +238,7 @@ def test_class_registration_preserves_identity_and_replaces_backend(monkeypatch)
     assert len(registry._backends) == 1
 
 
-@pytest.mark.parametrize('operation', ['unknown_dispatch_test', 'modules.unknown_dispatch_test'])
+@pytest.mark.parametrize('operation', ['unknown_dispatch_test', 'modules.unknown_dispatch_test', 'modules'])
 def test_dispatch_rejects_unknown_operation(monkeypatch, operation):
     monkeypatch.setattr(registry_module, '_registries', {})
     registry_module._registry_for(operation)
@@ -257,8 +257,7 @@ def test_dispatch_loads_owner_for_existing_registry(monkeypatch):
 
 
 @pytest.mark.parametrize('dependency', ['missing_optional_dependency', 'fla.ops.attn.backends.required'])
-@pytest.mark.parametrize('allow_unknown', [False, True], ids=['central', 'legacy'])
-def test_resolver_preserves_backend_dependency_errors(monkeypatch, dependency, allow_unknown):
+def test_resolver_preserves_backend_dependency_errors(monkeypatch, dependency):
     monkeypatch.setattr(registry_module, '_registries', {})
     registry_module._registry_for('attn')
     error = ModuleNotFoundError(f'Missing dependency: {dependency}', name=dependency)
@@ -268,7 +267,7 @@ def test_resolver_preserves_backend_dependency_errors(monkeypatch, dependency, a
 
     monkeypatch.setattr(registry_module.importlib, 'import_module', import_owner)
     with pytest.raises(ModuleNotFoundError) as caught:
-        registry_module._resolve_registry('attn', allow_unknown=allow_unknown)
+        registry_module._resolve_registry('attn')
     assert caught.value is error
 
 
@@ -307,7 +306,7 @@ def test_resolver_preserves_backend_dependency_errors(monkeypatch, dependency, a
 @pytest.mark.skipif(registry_module._DISPATCH_DISABLED, reason='dispatch was disabled before the entry points were imported')
 def test_module_dispatch_preserves_arguments_and_result(monkeypatch, owner, name, tensor_args, options):
     entry = getattr(importlib.import_module(f'fla.modules.{owner}.ops'), name)
-    backend = importlib.import_module(f'fla.modules.{owner}.backends.triton_ascend').TritonAscendBackend
+    backend = importlib.import_module(f'fla.modules.{owner}.backends').TritonAscendBackend
     calls = []
     expected = object()
 
@@ -371,13 +370,12 @@ def test_gdn2_dispatch_uses_local_registry(monkeypatch, module_name, func_name):
 
 
 @pytest.mark.parametrize('disabled', ['0', '1'], ids=['dispatch-enabled', 'dispatch-disabled'])
-def test_public_imports_do_not_load_legacy_dispatch(run_python, disabled):
+def test_public_imports_do_not_warn(run_python, disabled):
     run_python(
         """
-        import sys
         import warnings
 
-        warnings.filterwarnings('error', message='fla[.](ops|modules)[.]backends is deprecated', category=DeprecationWarning)
+        warnings.filterwarnings('error', message='fla.*deprecated', category=DeprecationWarning)
         from fla.ops.kda import chunk_kda
         from fla.backends import dispatch
         from fla.modules import ShortConvolution
@@ -385,8 +383,6 @@ def test_public_imports_do_not_load_legacy_dispatch(run_python, disabled):
         assert callable(chunk_kda)
         assert callable(dispatch)
         assert callable(ShortConvolution)
-        assert 'fla.ops.backends' not in sys.modules
-        assert 'fla.modules.backends' not in sys.modules
         """,
         FLA_DISABLE_BACKEND_DISPATCH=disabled,
     )
@@ -416,71 +412,6 @@ def test_conv_dispatch_uses_global_gluon_policy(monkeypatch, direction):
     assert getattr(ops, func_name)(x=torch.tensor([1.0, 2.0], requires_grad=True)) is result
 
 
-@pytest.mark.parametrize('first_import', ['fla.backends', 'fla.ops.backends'])
-def test_legacy_dispatch_uses_shared_registry(run_python, first_import):
-    run_python(
-        """
-        import importlib
-        import os
-        import warnings
-
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always', DeprecationWarning)
-            importlib.import_module(os.environ['FIRST_IMPORT'])
-            import fla.ops.backends as legacy
-        matching = [
-            warning for warning in caught
-            if warning.category is DeprecationWarning
-            and str(warning.message).startswith('fla.ops.backends is deprecated')
-        ]
-        assert len(matching) == 1, [str(w.message) for w in caught]
-        assert 'next release after 0.6.0' in str(matching[0].message)
-
-        from fla.backends import BaseBackend, dispatch
-        from fla import backends as registry_module
-        from fla.modules.conv.backends.gluon import ConvGluonBackend, GluonBackend
-        kda_registry = registry_module._resolve_registry('kda')
-        assert legacy.BaseBackend is BaseBackend
-        assert GluonBackend is ConvGluonBackend
-        assert legacy.BackendRegistry._registries is registry_module._registries
-        assert legacy.BackendRegistry('kda') is kda_registry
-        assert legacy.BackendRegistry('modules.norm.l2norm') is dispatch('modules.norm.l2norm').__self__
-        legacy.BackendRegistry.ensure_initialized('kda')
-        assert legacy.BackendRegistry._registries['kda'] is kda_registry
-        assert dispatch('kda').__self__ is kda_registry
-        assert legacy.dispatch('kda').__self__ is kda_registry
-
-        class Backend(BaseBackend):
-            backend_type = 'import_test'
-
-            def compute(self, x):
-                return x * 2
-
-        def compute(x):
-            return x * 3
-
-        custom = legacy.BackendRegistry('custom_import_test')
-        custom.register(Backend())
-        assert legacy.dispatch('custom_import_test')(compute)(2) == 4
-
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always', DeprecationWarning)
-            from fla.modules.backends import dispatch as module_dispatch, modules_registry
-        matching = [w for w in caught if str(w.message).startswith('fla.modules.backends is deprecated')]
-        assert len(matching) == 1
-        assert 'next release after 0.6.0' in str(matching[0].message)
-        assert legacy.BackendRegistry('modules') is modules_registry
-        assert dispatch('modules').__self__ is modules_registry
-        assert legacy.dispatch('modules').__self__ is modules_registry
-        assert module_dispatch is dispatch
-        modules_registry.register(Backend())
-        assert module_dispatch('modules')(compute)(2) == 4
-        """,
-        FIRST_IMPORT=first_import,
-        FLA_DISABLE_BACKEND_DISPATCH='0',
-    )
-
-
 @pytest.mark.parametrize('disabled', ['0', '1'], ids=['dispatch-enabled', 'dispatch-disabled'])
 def test_dispatch_policy_and_optional_dependencies(run_python, disabled):
     run_python(
@@ -491,8 +422,6 @@ def test_dispatch_policy_and_optional_dependencies(run_python, disabled):
 
         from fla.backends import dispatch
         from fla import backends as registry_module
-        assert 'fla.ops.backends' not in sys.modules
-        assert 'fla.modules.backends' not in sys.modules
         enabled = os.environ['FLA_DISABLE_BACKEND_DISPATCH'] != '1'
 
         def compute(x):
@@ -528,16 +457,10 @@ def test_dispatch_policy_and_optional_dependencies(run_python, disabled):
         assert 'flash_kda' not in sys.modules
         assert 'fla.ops.kda.backends.triton_ascend.chunk_intra' not in sys.modules
         assert not any(
-            name.startswith('fla.modules.') and '.backends.triton_ascend.ops' in name
+            name.startswith('fla.modules.') and name.endswith('.triton_ascend.ops')
             for name in sys.modules
         )
         assert 'fla.modules.conv.backends.gluon.ops' not in sys.modules
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', DeprecationWarning)
-            from fla.ops.backends import dispatch
-        legacy = dispatch('kda')(compute)
-        assert (legacy is compute) == (not enabled)
-        assert legacy(1) == 2
         """,
         FLA_DISABLE_BACKEND_DISPATCH=disabled,
     )

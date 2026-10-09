@@ -14,7 +14,7 @@ from fla.utils import IS_NVIDIA
 
 
 @register_backend('modules.conv')
-class ConvGluonBackend(BaseBackend):
+class GluonBackend(BaseBackend):
     """NVIDIA GPU backend using Gluon kernels."""
 
     backend_type = "gluon"
@@ -139,6 +139,4 @@ class ConvGluonBackend(BaseBackend):
         )
 
 
-GluonBackend = ConvGluonBackend
-
-__all__ = ['ConvGluonBackend', 'GluonBackend']
+__all__ = ['GluonBackend']

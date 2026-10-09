@@ -35,7 +35,7 @@ class TritonAscendBackend(BaseBackend):
         use_dx=True,
         use_dw=True,
     ):
-        from fla.modules.fused_kl_div.backends.triton_ascend.ops import fused_kl_div_fwd_npu
+        from fla.modules.fused_kl_div.triton_ascend.ops import fused_kl_div_fwd_npu
         return fused_kl_div_fwd_npu(
             x=x,
             target_x=target_x,
@@ -48,5 +48,5 @@ class TritonAscendBackend(BaseBackend):
         )
 
     def fused_kl_div_bwd(self, do, dx, dw):
-        from fla.modules.fused_kl_div.backends.triton_ascend.ops import fused_kl_div_bwd_npu
+        from fla.modules.fused_kl_div.triton_ascend.ops import fused_kl_div_bwd_npu
         return fused_kl_div_bwd_npu(do=do, dx=dx, dw=dw)

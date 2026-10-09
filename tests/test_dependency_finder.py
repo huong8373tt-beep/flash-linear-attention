@@ -18,7 +18,7 @@ def backend_project(tmp_path):
     directory.mkdir()
     sources = {
         'kda': "from fla.backends import dispatch\n@dispatch('kda')\ndef compute(x): return x\n",
-        'gdn2': "from fla.ops.backends import dispatch as route\n@route('gdn2')\ndef compute(x): return x\n",
+        'gdn2': "from fla.backends import dispatch as route\n@route('gdn2')\ndef compute(x): return x\n",
         'dplr': (
             "from fla.backends import dispatch\n"
             "@dispatch('generalized_delta_rule.dplr')\ndef compute(x): return x\n"
@@ -32,17 +32,21 @@ def backend_project(tmp_path):
     }
     for name, source in sources.items():
         (directory / f'{name}.py').write_text(source)
+    owner = directory / 'modules/activations'
+    (owner / 'triton_ascend').mkdir(parents=True)
+    (owner / 'backends.py').write_text('from fla.modules.activations.triton_ascend import TritonAscendBackend\n')
     return tmp_path
 
 
 @pytest.mark.parametrize(('changed', 'expected'), [
     ('fla/backends.py', {'kda', 'gdn2', 'dplr', 'modules'}),
-    ('fla/ops/backends/__init__.py', {'kda', 'gdn2', 'dplr', 'modules'}),
     ('fla/ops/kda/backends/__init__.py', {'kda'}),
     ('fla/ops/kda/backends/triton_ascend/chunk.py', {'kda'}),
     ('fla/ops/gdn2/backends/triton_ascend/__init__.py', {'gdn2'}),
     ('fla/ops/generalized_delta_rule/dplr/backends/__init__.py', {'dplr'}),
-    ('fla/modules/activations/backends/triton_ascend/ops.py', {'modules'}),
+    ('fla/modules/activations/triton_ascend/ops.py', {'modules'}),
+    ('fla/modules/activations/triton_ascend/__init__.py', {'modules'}),
+    ('fla/modules/activations/backends.py', {'modules'}),
     ('fla/utils/_compat.py', set()),
 ])
 def test_backend_changes_follow_dispatch_ownership(backend_project, changed, expected):
@@ -50,13 +54,17 @@ def test_backend_changes_follow_dispatch_ownership(backend_project, changed, exp
     assert set(paths) == {f'fla/{name}.py' for name in expected}
 
 
-def test_backend_changes_follow_shared_kernel_imports(backend_project):
-    path = backend_project / 'fla/ops/gdn2/backends/triton_ascend/chunk_bwd.py'
-    path.parent.mkdir(parents=True)
+@pytest.mark.parametrize(('backend_file', 'expected'), [
+    ('fla/ops/gdn2/backends/triton_ascend/chunk_bwd.py', {'fla/kda.py', 'fla/gdn2.py'}),
+    ('fla/modules/activations/triton_ascend/ops.py', {'fla/kda.py', 'fla/modules.py'}),
+])
+def test_backend_changes_follow_shared_kernel_imports(backend_project, backend_file, expected):
+    path = backend_project / backend_file
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text('from fla.ops.kda.backends.triton_ascend.chunk_bwd import chunk_kda_bwd_kernel_wy_k_part_npu\n')
 
     paths = find_backend_op_files(['fla/ops/kda/backends/triton_ascend/chunk_bwd.py'], backend_project)
-    assert set(paths) == {'fla/kda.py', 'fla/gdn2.py'}
+    assert set(paths) == expected
 
 
 def test_dependencies_follow_reexports_and_aliases(tmp_path):
@@ -122,7 +130,7 @@ def test_backend_changes_follow_repository_ownership(changed, expected, unrelate
         }),
         ('fla/ops/attn/backends/tilelang/parallel.py', {'tests/ops/test_attn.py'}),
         ('fla/ops/kda/backends/triton_ascend/chunk_bwd.py', {'tests/ops/test_kda.py', 'tests/ops/test_gdn2.py'}),
-        ('fla/modules/activations/backends/triton_ascend/ops.py', {'tests/modules/test_activation.py'}),
+        ('fla/modules/activations/triton_ascend/ops.py', {'tests/modules/test_activation.py'}),
     ],
 )
 def test_backend_changes_select_original_test_files(repository_finder, changed, expected):

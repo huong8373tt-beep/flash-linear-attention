@@ -5,7 +5,7 @@
 # For a list of all contributors, visit:
 #   https://github.com/fla-org/flash-linear-attention/graphs/contributors
 
-from fla.modules.conv.backends.gluon import ConvGluonBackend
+from fla.modules.conv.backends.gluon import GluonBackend
 from fla.modules.conv.backends.triton_ascend import TritonAscendBackend
 
-__all__ = ['ConvGluonBackend', 'TritonAscendBackend']
+__all__ = ['GluonBackend', 'TritonAscendBackend']

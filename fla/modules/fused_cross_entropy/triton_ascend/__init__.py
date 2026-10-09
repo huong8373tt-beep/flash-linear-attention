@@ -36,7 +36,7 @@ class TritonAscendBackend(BaseBackend):
         inplace_backward=False,
         process_group=None,
     ):
-        from fla.modules.fused_cross_entropy.backends.triton_ascend.ops import cross_entropy_loss_npu
+        from fla.modules.fused_cross_entropy.triton_ascend.ops import cross_entropy_loss_npu
         return cross_entropy_loss_npu(
             logits=logits,
             target=target,

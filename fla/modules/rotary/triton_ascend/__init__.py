@@ -8,9 +8,9 @@
 from fla.backends import BaseBackend, register_backend
 
 
-@register_backend('modules.grpo')
+@register_backend('modules.rotary')
 class TritonAscendBackend(BaseBackend):
-    """Ascend implementation of this operation."""
+    """Ascend NPU backend for rotary."""
 
     backend_type = "triton_ascend"
     package_name = None
@@ -22,28 +22,27 @@ class TritonAscendBackend(BaseBackend):
         from fla.utils import IS_NPU
         return IS_NPU
 
-    def fused_grpo_loss(
+    def rotary_embedding_fwdbwd(
         self,
-        logits,
-        ref_logp,
-        input_ids,
-        advantages,
-        beta=0.1,
-        completion_mask=None,
-        save_kl=False,
+        x,
+        cos,
+        sin,
+        seqlen_offsets=0,
+        cu_seqlens=None,
+        interleaved=False,
         inplace=False,
+        conjugate=False,
+        chunk_indices=None,
     ):
-        from fla.modules.grpo.backends.triton_ascend.ops import fused_grpo_loss_npu
-        return fused_grpo_loss_npu(
-            logits=logits,
-            ref_logp=ref_logp,
-            input_ids=input_ids,
-            advantages=advantages,
-            beta=beta,
-            completion_mask=completion_mask,
-            save_kl=save_kl,
+        from fla.modules.rotary.triton_ascend.ops import rotary_embedding_fwdbwd_npu
+        return rotary_embedding_fwdbwd_npu(
+            x=x,
+            cos=cos,
+            sin=sin,
+            seqlen_offsets=seqlen_offsets,
+            cu_seqlens=cu_seqlens,
+            interleaved=interleaved,
             inplace=inplace,
+            conjugate=conjugate,
+            chunk_indices=chunk_indices,
         )
-
-
-__all__ = ['TritonAscendBackend']

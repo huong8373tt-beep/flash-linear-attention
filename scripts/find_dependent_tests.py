@@ -90,10 +90,9 @@ def _get_dispatch_owners(tree) -> set[str]:
     """Read operation keys from the supported dispatch imports."""
     if not tree:
         return set()
-    dispatch_modules = {'fla.backends', 'fla.ops.backends', 'fla.modules.backends'}
     dispatch_names = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.module in dispatch_modules:
+        if isinstance(node, ast.ImportFrom) and node.module == 'fla.backends':
             dispatch_names.update(alias.asname or alias.name for alias in node.names if alias.name == 'dispatch')
     owners = set()
     for node in ast.walk(tree):
@@ -102,19 +101,30 @@ def _get_dispatch_owners(tree) -> set[str]:
         if not node.args or not isinstance(node.args[0], ast.Constant) or not isinstance(node.args[0].value, str):
             continue
         operation = node.args[0].value
-        prefix = 'fla' if operation == 'modules' or operation.startswith('modules.') else 'fla.ops'
+        prefix = 'fla' if operation.startswith('modules.') else 'fla.ops'
         owners.add(f'{prefix}.{operation}.backends')
     return owners
 
 
+def _backend_owner(module: str, project_root: Path) -> str | None:
+    parts = module.split('.')
+    if 'backends' in parts:
+        return '.'.join(parts[:parts.index('backends') + 1])
+    for i in range(len(parts) - 1, 1, -1):
+        owner = project_root.joinpath(*parts[:i])
+        if (owner / 'backends.py').is_file() and (owner / parts[i]).is_dir():
+            return '.'.join([*parts[:i], 'backends'])
+    return None
+
+
 def find_backend_op_files(changed_files: list[str], project_root: Path) -> list[str]:
     """Map backend changes and shared kernel imports to dispatch consumers."""
-    shared = any(file == 'fla/backends.py' or file.startswith('fla/ops/backends/') for file in changed_files)
+    shared = 'fla/backends.py' in changed_files
     owners = set()
     for file in changed_files:
-        parts = Path(file).parts
-        if 'backends' in parts:
-            owners.add('.'.join(parts[:parts.index('backends') + 1]))
+        owner = _backend_owner(file_to_module_path(project_root / file, project_root), project_root)
+        if owner:
+            owners.add(owner)
     if not shared and not owners:
         return []
 
@@ -122,14 +132,12 @@ def find_backend_op_files(changed_files: list[str], project_root: Path) -> list[
     backend_dependents = defaultdict(set)
     for path in (project_root / 'fla').rglob('*.py'):
         relative_path = path.relative_to(project_root)
-        parts = relative_path.parts
         tree = parse_file(path)
-        if 'backends' in parts:
-            owner = '.'.join(parts[:parts.index('backends') + 1])
+        owner = _backend_owner(file_to_module_path(path, project_root), project_root)
+        if owner:
             for module, _ in get_imports_from_tree(tree):
-                module_parts = module.split('.')
-                if 'backends' in module_parts:
-                    dependency = '.'.join(module_parts[:module_parts.index('backends') + 1])
+                dependency = _backend_owner(module, project_root)
+                if dependency:
                     backend_dependents[dependency].add(owner)
         else:
             dispatch_owners[str(relative_path)] = _get_dispatch_owners(tree)

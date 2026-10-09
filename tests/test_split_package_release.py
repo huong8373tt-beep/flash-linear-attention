@@ -116,7 +116,6 @@ def test_split_wheels_match_release_contract(tmp_path: Path) -> None:
     ext_names = _wheel_names(ext_wheel)
 
     assert "fla/__init__.py" in core_names
-    assert "fla/ops/backends/__init__.py" in core_names
     assert "fla/ops/__init__.py" in core_names
     assert "fla/modules/__init__.py" in core_names
     assert "fla/backends.py" in core_names

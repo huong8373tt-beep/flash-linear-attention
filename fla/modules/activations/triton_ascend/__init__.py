@@ -23,49 +23,49 @@ class TritonAscendBackend(BaseBackend):
         return IS_NPU
 
     def sigmoid_fwd(self, x, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import sigmoid_fwd_npu
+        from fla.modules.activations.triton_ascend.ops import sigmoid_fwd_npu
         return sigmoid_fwd_npu(x=x, output_contiguous=output_contiguous)
 
     def sigmoid_bwd(self, x, dy, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import sigmoid_bwd_npu
+        from fla.modules.activations.triton_ascend.ops import sigmoid_bwd_npu
         return sigmoid_bwd_npu(x=x, dy=dy, output_contiguous=output_contiguous)
 
     def logsigmoid_fwd(self, x, temperature=1., output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import logsigmoid_fwd_npu
+        from fla.modules.activations.triton_ascend.ops import logsigmoid_fwd_npu
         return logsigmoid_fwd_npu(x=x, temperature=temperature, output_contiguous=output_contiguous)
 
     def logsigmoid_bwd(self, x, dy, temperature=1., output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import logsigmoid_bwd_npu
+        from fla.modules.activations.triton_ascend.ops import logsigmoid_bwd_npu
         return logsigmoid_bwd_npu(x=x, dy=dy, temperature=temperature, output_contiguous=output_contiguous)
 
     def swish_fwd(self, x, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import swish_fwd_npu
+        from fla.modules.activations.triton_ascend.ops import swish_fwd_npu
         return swish_fwd_npu(x=x, output_contiguous=output_contiguous)
 
     def swish_bwd(self, x, dy, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import swish_bwd_npu
+        from fla.modules.activations.triton_ascend.ops import swish_bwd_npu
         return swish_bwd_npu(x=x, dy=dy, output_contiguous=output_contiguous)
 
     def swiglu_fwd(self, x, y, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import swiglu_fwd_npu
+        from fla.modules.activations.triton_ascend.ops import swiglu_fwd_npu
         return swiglu_fwd_npu(x=x, y=y, output_contiguous=output_contiguous)
 
     def swiglu_fwdbwd(self, x, y, g, use_weight=False, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import swiglu_fwdbwd_npu
+        from fla.modules.activations.triton_ascend.ops import swiglu_fwdbwd_npu
         return swiglu_fwdbwd_npu(x=x, y=y, g=g, use_weight=use_weight, output_contiguous=output_contiguous)
 
     def swiglu_linear(self, x, y, weight, bias):
-        from fla.modules.activations.backends.triton_ascend.ops import swiglu_linear_npu
+        from fla.modules.activations.triton_ascend.ops import swiglu_linear_npu
         return swiglu_linear_npu(x=x, y=y, weight=weight, bias=bias)
 
     def powglu_fwd(self, x, y, power=3.0, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import powglu_fwd_npu
+        from fla.modules.activations.triton_ascend.ops import powglu_fwd_npu
         return powglu_fwd_npu(x=x, y=y, power=power, output_contiguous=output_contiguous)
 
     def powglu_fwdbwd(self, x, y, g, power=3.0, use_weight=False, output_contiguous=False):
-        from fla.modules.activations.backends.triton_ascend.ops import powglu_fwdbwd_npu
+        from fla.modules.activations.triton_ascend.ops import powglu_fwdbwd_npu
         return powglu_fwdbwd_npu(x=x, y=y, g=g, power=power, use_weight=use_weight, output_contiguous=output_contiguous)
 
     def powglu_linear(self, x, y, weight, bias, power=3.0):
-        from fla.modules.activations.backends.triton_ascend.ops import powglu_linear_npu
+        from fla.modules.activations.triton_ascend.ops import powglu_linear_npu
         return powglu_linear_npu(x=x, y=y, weight=weight, bias=bias, power=power)

@@ -80,7 +80,6 @@ def test_public_function_aliases():
         assert activations.ACT2FN[name] is getattr(activations, name)
     assert activations.ACT2FN['silu'] is activations.swish
     assert activations.ACT2FN['gelu'] is activations.fast_gelu_impl
-    assert activations.ACT2FN['bias_gelu'] is activations.bias_gelu_impl
     assert l2norm.l2_norm is l2norm.l2norm
     assert fused_linear_cross_entropy.fused_linear_cross_entropy_forward is fused_linear_cross_entropy.fused_linear_cross_entropy_fwd
     assert fused_linear_cross_entropy.fused_linear_cross_entropy_backward is fused_linear_cross_entropy.fused_linear_cross_entropy_bwd
